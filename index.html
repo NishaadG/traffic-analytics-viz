@@ -4,409 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neon Traffic — PySpark Analytics</title>
-<meta name="description" content="Google Maps-inspired traffic analytics with Apache PySpark, visualised as a neon 3D city.">
+<meta name="description" content="Google Maps-inspired traffic analytics with Apache PySpark, as a 3D mindmap you fly through.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#05040f; --ink:#e8ecff; --mute:#8a93c4;
-    --cyan:#00f0ff; --mag:#ff2bd6; --amber:#ffb020; --red:#ff3860; --violet:#7b5cff;
-    --glass:rgba(16,14,40,.55); --line:rgba(120,130,255,.22);
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--ink);font-family:'Rajdhani',sans-serif;font-size:18px;overflow-x:hidden}
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
-    background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
-  h1,h2,h3,.orb{font-family:'Orbitron',sans-serif}
-  /* HERO */
-  #hero{position:relative;height:100vh;min-height:620px;overflow:hidden}
-  #scene{position:absolute;inset:0;width:100%;height:100%;display:block}
-  #hero::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 40%,transparent 35%,rgba(5,4,15,.85) 100%),linear-gradient(to bottom,transparent 70%,var(--bg))}
-  .hero-text{position:absolute;left:6vw;bottom:14vh;z-index:5;pointer-events:none;max-width:720px}
-  .tag{font-family:'Orbitron';letter-spacing:.35em;font-size:.72rem;color:var(--cyan);text-shadow:0 0 12px var(--cyan);margin-bottom:1.1rem}
-  h1{font-size:clamp(2.6rem,8vw,6.4rem);line-height:.95;font-weight:900;letter-spacing:.02em;
-    background:linear-gradient(95deg,#fff 0%,var(--cyan) 40%,var(--mag) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 22px rgba(0,240,255,.35))}
-  .sub{margin-top:1.2rem;color:var(--mute);font-size:1.25rem;font-weight:500;letter-spacing:.04em}
-  .scroll{position:absolute;bottom:3.5vh;left:50%;transform:translateX(-50%);z-index:5;font-family:'Orbitron';font-size:.62rem;letter-spacing:.4em;color:var(--mute);text-align:center}
-  .scroll i{display:block;width:1px;height:38px;margin:10px auto 0;background:linear-gradient(var(--cyan),transparent);animation:drip 1.8s infinite}
-  @keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
-  .hud{position:absolute;right:5vw;top:11vh;z-index:5;width:250px;padding:18px 20px;background:var(--glass);border:1px solid var(--line);
-    backdrop-filter:blur(14px);border-radius:14px;box-shadow:0 0 40px rgba(123,92,255,.18),inset 0 0 30px rgba(0,240,255,.05)}
-  .hud .lbl{font-family:'Orbitron';font-size:.6rem;letter-spacing:.3em;color:var(--mute)}
-  .hud .clock{font-family:'Orbitron';font-weight:700;font-size:2.6rem;color:#fff;text-shadow:0 0 18px var(--cyan);margin:4px 0 10px}
-  .hud .row{display:flex;justify-content:space-between;font-size:1rem;margin:3px 0;color:var(--mute)}
-  .hud .row b{color:#fff;font-weight:600}
-  .status{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:99px;font-family:'Orbitron';font-size:.62rem;letter-spacing:.2em;border:1px solid currentColor}
-  .legend{display:flex;gap:14px;margin-top:14px;font-size:.85rem;color:var(--mute)}
-  .legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--c);box-shadow:0 0 8px var(--c)}
-  /* SECTIONS */
-  section.s{position:relative;padding:14vh 6vw 4vh;max-width:1400px;margin:0 auto}
-  .eyebrow{font-family:'Orbitron';font-size:.7rem;letter-spacing:.4em;color:var(--mag);text-shadow:0 0 10px var(--mag)}
-  h2{font-size:clamp(1.8rem,4.4vw,3.2rem);font-weight:700;margin:.6rem 0 .8rem;line-height:1.1}
-  h2 em{font-style:normal;background:linear-gradient(90deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lead{color:var(--mute);max-width:640px;font-size:1.2rem;margin-bottom:2.2rem}
-  .glass{background:var(--glass);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px);
-    box-shadow:0 0 60px rgba(123,92,255,.12),inset 0 0 40px rgba(0,240,255,.03);position:relative}
-  .glass::before{content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;pointer-events:none;
-    background:linear-gradient(135deg,rgba(0,240,255,.55),transparent 35%,transparent 65%,rgba(255,43,214,.55));
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-  .chart{height:440px;padding:10px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
-  .grid2 .chart{height:420px}
-  .card-t{padding:22px 26px 0;font-family:'Orbitron';font-size:.8rem;letter-spacing:.2em;color:var(--cyan)}
-  /* KPIs */
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;padding-top:6vh}
-  .kpi{padding:28px 24px}
-  .kpi .v{font-family:'Orbitron';font-weight:900;font-size:clamp(2rem,4vw,3.2rem);color:#fff;text-shadow:0 0 22px var(--c)}
-  .kpi .v small{font-size:.45em;color:var(--mute);margin-left:4px;text-shadow:none}
-  .kpi .k{color:var(--mute);margin-top:6px;letter-spacing:.06em}
-  .kpi .bar{height:3px;margin-top:16px;border-radius:3px;background:linear-gradient(90deg,var(--c),transparent)}
-  /* Insights */
-  .ins{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-  .ins .glass{padding:30px 28px}
-  .ins .n{font-family:'Orbitron';font-weight:900;font-size:3rem;color:transparent;-webkit-text-stroke:1px var(--c);opacity:.8}
-  .ins h3{font-size:1.05rem;letter-spacing:.08em;margin:6px 0 10px;color:#fff}
-  .ins p{color:var(--mute);line-height:1.45}
-  .ins b{color:var(--ink)}
-  .stack{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}
-  .chip{padding:7px 16px;border:1px solid var(--line);border-radius:99px;font-size:.95rem;color:var(--mute);background:rgba(255,255,255,.02)}
-  footer{padding:10vh 6vw 6vh;text-align:center;color:var(--mute);font-size:.95rem;max-width:760px;margin:0 auto}
-  footer .orb{color:var(--cyan);letter-spacing:.3em;font-size:.7rem;display:block;margin-bottom:10px}
-  /* reveal */
-  .rv{opacity:0;transform:translateY(46px) scale(.98);filter:blur(6px);transition:all 1s cubic-bezier(.2,.7,.2,1)}
-  .rv.in{opacity:1;transform:none;filter:none}
-  @media(max-width:900px){
-    .kpis,.grid2,.ins{grid-template-columns:1fr 1fr}.ins{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}
-    .hud{top:auto;bottom:auto;right:50%;transform:translateX(50%);top:9vh;width:230px}
-    .hero-text{bottom:16vh}
-  }
-  @media(max-width:520px){.kpis{grid-template-columns:1fr}}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
-<body>
-
-<header id="hero">
+<body data-st="hub">
+<div id="app">
   <canvas id="scene"></canvas>
-  <div class="hud">
-    <div class="lbl">CITY CLOCK</div>
-    <div class="clock" id="clock">00:00</div>
-    <div class="row"><span>Avg speed</span><b id="hSpeed">—</b></div>
-    <div class="row"><span>Avg volume</span><b id="hVol">—</b></div>
-    <div class="status" id="hStatus">FREE FLOW</div>
-    <div class="legend"><span style="--c:#00f0ff">fast</span><span style="--c:#ffb020">slow</span><span style="--c:#ff3860">jam</span></div>
-  </div>
-  <div class="hero-text">
-    <div class="tag">BIG DATA ANALYTICS · FA 2</div>
-    <h1>NEON<br>TRAFFIC</h1>
-    <p class="sub">A Google Maps-inspired congestion study, crunched in Apache PySpark.</p>
-  </div>
-  <div class="scroll">SCROLL<i></i></div>
-</header>
+</div>
 
-<section class="s" id="kpi">
-  <div class="eyebrow rv">01 // THE PROBLEM</div>
-  <h2 class="rv">Where does a city <em>slow down?</em></h2>
-  <p class="lead rv">Twelve road sensors, three alternative routes, one day of readings every 30 minutes. We used PySpark to clean, aggregate and rank them — then turned the numbers into something you can actually see.</p>
-  <div class="kpis">
-    <div class="glass kpi rv" style="--c:#00f0ff"><div class="v"><span data-n="576">0</span></div><div class="k">Sensor readings processed</div><div class="bar"></div></div>
-    <div class="glass kpi rv" style="--c:#7b5cff"><div class="v"><span id="kAvg" data-n="33.6" data-d="1">0</span><small>km/h</small></div><div class="k">Network average speed</div><div class="bar"></div></div>
-    <div class="glass kpi rv" style="--c:#ff3860"><div class="v">−<span id="kDrop" data-n="48">0</span><small>%</small></div><div class="k">Speed lost at rush hour</div><div class="bar"></div></div>
-    <div class="glass kpi rv" style="--c:#ffb020"><div class="v"><span id="kBest">R3</span></div><div class="k">Fastest route by travel time</div><div class="bar"></div></div>
-  </div>
-</section>
+<div id="top">
+  <div class="brand"><b>NEON TRAFFIC</b><span>BIG DATA ANALYTICS · FA 2</span></div>
+  <button id="back" class="ghost">← MAP</button>
+</div>
 
-<section class="s" id="line">
-  <div class="eyebrow rv">02 // TIME SERIES</div>
-  <h2 class="rv">The city has a <em>pulse</em></h2>
-  <p class="lead rv">Average speed collapses twice a day. The shaded bands are the morning and evening peaks.</p>
-  <div class="glass chart rv"><div id="cLine" style="height:100%"></div></div>
-</section>
+<div id="hint">DRAG TO ORBIT · CLICK A NODE TO FLY · ← → KEYS · ESC FOR MAP</div>
 
-<section class="s" id="heat">
-  <div class="eyebrow rv">03 // HEATMAP</div>
-  <h2 class="rv">Every sensor, <em>every hour</em></h2>
-  <p class="lead rv">Each cell is a sensor's average speed in that hour. The red blocks are the traffic jams, and they appear in every corridor at once.</p>
-  <div class="glass chart rv" style="height:520px"><div id="cHeat" style="height:100%"></div></div>
-</section>
+<aside id="panel" class="glass"></aside>
 
-<section class="s" id="rank">
-  <div class="eyebrow rv">04 // RANKINGS</div>
-  <h2 class="rv">Bottlenecks &amp; <em>best routes</em></h2>
-  <p class="lead rv">Which sensors drag the network down, and which route actually gets you there fastest.</p>
-  <div class="grid2">
-    <div class="glass rv"><div class="card-t">TEN SLOWEST SENSORS</div><div class="chart" id="cBar"></div></div>
-    <div class="glass rv"><div class="card-t">ESTIMATED ROUTE TIME (MIN)</div><div class="chart" id="cRoute"></div></div>
-  </div>
-</section>
+<div id="speedo" class="glass">
+  <div class="l">CITY CLOCK</div>
+  <div class="h" id="sHour">00:00</div>
+  <div class="l">SPEED</div>
+  <div class="s"><span id="sSpeed">0</span><small>km/h</small></div>
+  <div class="bw"><div id="sBar"></div></div>
+</div>
 
-<section class="s" id="ins">
-  <div class="eyebrow rv">05 // INSIGHTS</div>
-  <h2 class="rv">What we <em>found</em></h2>
-  <p class="lead rv">&nbsp;</p>
-  <div class="ins">
-    <div class="glass rv" style="--c:#00f0ff"><div class="n">01</div><h3>RUSH HOURS ARE BRUTAL</h3><p>Speeds fall from about <b id="iOff">39</b> km/h to <b id="iPeak">20</b> km/h in the 07–09 and 17–20 windows while volume more than doubles. Same roads, half the speed.</p></div>
-    <div class="glass rv" style="--c:#ff2bd6"><div class="n">02</div><h3>STATION ROAD IS THE CHOKEPOINT</h3><p><b id="iWorst">S04 Station Road</b> is the slowest sensor all day, followed by Market Road and College Road. These are the first places to add signal timing or lane capacity.</p></div>
-    <div class="glass rv" style="--c:#ffb020"><div class="n">03</div><h3>GO VIA ROUTE 3</h3><p>R3 is the longest on paper but the quickest in practice at <b id="iR3">8.3</b> min, because its roads keep moving. A congestion-aware router should recommend it.</p></div>
-  </div>
-  <div class="stack rv">
-    <span class="chip">Apache PySpark 4.0</span><span class="chip">DataFrame · groupBy · agg</span><span class="chip">Three.js</span><span class="chip">Plotly</span><span class="chip">Synthetic data</span>
-  </div>
-</section>
+<nav id="nav"></nav>
+<div id="fade"></div>
+<div id="credit">Car model: Ferrari 458 Italia by vicent091036 (Sketchfab, CC-BY) · Data is synthetic</div>
 
-<footer>
-  <span class="orb">// END OF TRANSMISSION</span>
-  Dataset is synthetic: 12 fictional sensors with illustrative coordinates, generated for teaching. It is not live Google Maps data.
-</footer>
+<div id="loader">
+  <div class="lt">NEON TRAFFIC</div>
+  <div class="ls">warming up the engine…</div>
+  <div class="lb"><div id="loadBar"></div></div>
+</div>
 
-<script src="data.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
-</script>
-<script>
-/* ---------- shared helpers & stats ---------- */
-const D = window.DATA;
-const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
-const peakH = h => (h>=7&&h<=9)||(h>=17&&h<=20);
-const peakAvg = mean(D.hourly.filter((_,h)=>peakH(h)));
-const offAvg  = mean(D.hourly.filter((_,h)=>!peakH(h)));
-const drop = Math.round((1-peakAvg/offAvg)*100);
-const byAvg = [...D.sensors].sort((a,b)=>a.avg-b.avg);
-document.getElementById('kDrop').dataset.n = drop;
-document.getElementById('kAvg').dataset.n = D.avg.toFixed(1);
-document.getElementById('kBest').textContent = Object.entries(D.routes).sort((a,b)=>a[1].time-b[1].time)[0][0];
-document.getElementById('iOff').textContent = Math.round(offAvg);
-document.getElementById('iPeak').textContent = Math.round(peakAvg);
-document.getElementById('iWorst').textContent = byAvg[0].id+' '+byAvg[0].road;
-document.getElementById('iR3').textContent = D.routes.R3.time.toFixed(1);
-
-if(location.search.includes('shot')){const st=document.createElement('style');st.textContent='#hero{display:none}';document.head.appendChild(st)}
-/* reveal + count-up */
-const io = new IntersectionObserver(es=>es.forEach(e=>{
-  if(!e.isIntersecting) return;
-  e.target.classList.add('in'); io.unobserve(e.target);
-  e.target.querySelectorAll('[data-n]').forEach(el=>{
-    const to=+el.dataset.n, dec=+(el.dataset.d||0), t0=performance.now();
-    (function f(t){const p=Math.min(1,(t-t0)/1400),k=1-Math.pow(1-p,3);el.textContent=(to*k).toFixed(dec);if(p<1)requestAnimationFrame(f)})(t0);
-  });
-}),{threshold:.15});
-document.querySelectorAll('.rv').forEach(el=>{ if(location.search.includes('shot')){el.classList.add('in');el.querySelectorAll('[data-n]').forEach(n=>n.textContent=n.dataset.n)} else io.observe(el) });
-
-/* ---------- Plotly charts ---------- */
-const col = s => s<20?'#ff3860':s<30?'#ffb020':s<40?'#7b5cff':'#00f0ff';
-const base = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{family:'Rajdhani',color:'#8a93c4',size:14},
-  margin:{l:60,r:28,t:20,b:50},hoverlabel:{bgcolor:'#0d0b24',bordercolor:'#00f0ff',font:{family:'Rajdhani',color:'#fff'}}};
-const grid = 'rgba(138,147,196,.12)';
-const cfg = {displayModeBar:false,responsive:true};
-const hrs = [...Array(24).keys()];
-const hl = h => String(h).padStart(2,'0')+':00';
-
-function drawCharts(){
-  Plotly.newPlot('cLine',[{x:hrs,y:D.hourly,type:'scatter',mode:'lines+markers',line:{color:'#00f0ff',width:4,shape:'spline'},
-    marker:{size:8,color:'#05040f',line:{color:'#00f0ff',width:2}},fill:'tozeroy',fillcolor:'rgba(0,240,255,.10)',
-    hovertemplate:'%{x}:00 — <b>%{y:.1f} km/h</b><extra></extra>'}],
-    {...base,xaxis:{gridcolor:grid,dtick:2,title:'Hour of day',zeroline:false},yaxis:{gridcolor:grid,title:'Avg speed (km/h)',range:[0,48],zeroline:false},
-     shapes:[[6.5,9.5],[16.5,20.5]].map(([a,b])=>({type:'rect',xref:'x',yref:'paper',x0:a,x1:b,y0:0,y1:1,fillcolor:'rgba(255,43,214,.13)',line:{width:0}})),
-     annotations:[{x:8,y:46,text:'MORNING RUSH',showarrow:false,font:{color:'#ff2bd6',size:12}},{x:18.5,y:46,text:'EVENING RUSH',showarrow:false,font:{color:'#ff2bd6',size:12}}]},cfg);
-
-  const order=[...D.sensors].sort((a,b)=>a.id<b.id?1:-1);
-  Plotly.newPlot('cHeat',[{z:order.map(s=>s.speed),x:hrs.map(hl),y:order.map(s=>s.id+' · '+s.road),type:'heatmap',xgap:2,ygap:2,
-    colorscale:[[0,'#ff3860'],[.25,'#ff2bd6'],[.5,'#7b5cff'],[.78,'#1fb6ff'],[1,'#00f0ff']],
-    colorbar:{title:{text:'km/h'},outlinewidth:0,thickness:12,tickfont:{color:'#8a93c4'}},
-    hovertemplate:'%{y}<br>%{x} — <b>%{z:.1f} km/h</b><extra></extra>'}],
-    {...base,margin:{l:150,r:20,t:20,b:60},xaxis:{tickangle:-45,dtick:2},yaxis:{}},cfg);
-
-  const top=byAvg.slice(0,10).reverse();
-  Plotly.newPlot('cBar',[{type:'bar',orientation:'h',x:top.map(s=>s.avg),y:top.map(s=>s.id+' '+s.road),
-    marker:{color:top.map(s=>col(s.avg)),line:{width:0}},text:top.map(s=>s.avg.toFixed(1)),textposition:'outside',textfont:{color:'#fff'},
-    hovertemplate:'%{y}<br><b>%{x:.1f} km/h</b><extra></extra>'}],
-    {...base,margin:{l:150,r:40,t:10,b:40},xaxis:{gridcolor:grid,range:[0,60],title:'Avg speed (km/h)'},yaxis:{}},cfg);
-
-  const rk=Object.entries(D.routes).sort((a,b)=>a[1].time-b[1].time);
-  const rc={R1:'#7b5cff',R2:'#ff2bd6',R3:'#00f0ff'};
-  Plotly.newPlot('cRoute',[{type:'bar',x:rk.map(r=>r[0]),y:rk.map(r=>r[1].time),marker:{color:rk.map(r=>rc[r[0]])},
-    text:rk.map(r=>r[1].time.toFixed(1)+' min'),textposition:'outside',textfont:{color:'#fff'},width:.5,
-    hovertemplate:'%{x}<br><b>%{y:.2f} min</b><extra></extra>'}],
-    {...base,margin:{l:55,r:20,t:30,b:40},yaxis:{gridcolor:grid,range:[0,12],title:'Minutes'},xaxis:{}},cfg);
-}
-window.addEventListener('load',drawCharts);
-</script>
-
-<script type="module">
-import * as THREE from 'three';
-import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
-import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
-import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-
-const D = window.DATA;
-const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x05040f);
-scene.fog = new THREE.FogExp2(0x070418,0.012);
-const camera = new THREE.PerspectiveCamera(48,1,0.1,300);
-
-/* geo -> world */
-const lat0 = mean(D.sensors.map(s=>s.lat)), lon0 = mean(D.sensors.map(s=>s.lon));
-const K = 1250;
-const P = (lat,lon) => new THREE.Vector3((lon-lon0)*K, 0, -(lat-lat0)*K);
-function mean(a){return a.reduce((x,y)=>x+y,0)/a.length}
-
-/* ground */
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(220,220),new THREE.MeshBasicMaterial({color:0x06041a}));
-ground.rotation.x = -Math.PI/2; ground.position.y=-0.02; scene.add(ground);
-const grid1 = new THREE.GridHelper(220,110,0x3a2a9a,0x1a1650); grid1.material.transparent=true; grid1.material.opacity=.55; scene.add(grid1);
-
-/* sensors */
-const speedColor = s => {
-  const c = new THREE.Color();
-  if(s<=15) return c.set(0xff3860);
-  if(s<30)  return c.set(0xff3860).lerp(new THREE.Color(0xffb020),(s-15)/15);
-  if(s<45)  return c.set(0xffb020).lerp(new THREE.Color(0x00f0ff),(s-30)/15);
-  return c.set(0x00f0ff);
-};
-const sensors = D.sensors.map(s=>{
-  const pos = P(s.lat,s.lon);
-  const mat = new THREE.MeshBasicMaterial({color:0x00f0ff,transparent:true,opacity:.92});
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(0.9,1,0.9),mat);
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.15,0.12,1.15),mat.clone());
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9,1.05,48),new THREE.MeshBasicMaterial({color:0x00f0ff,transparent:true,opacity:.7,side:THREE.DoubleSide}));
-  ring.rotation.x=-Math.PI/2; ring.position.set(pos.x,0.03,pos.z);
-  tower.position.copy(pos); cap.position.copy(pos);
-  scene.add(tower,cap,ring);
-  return {...s,pos,tower,cap,ring,h:1,tc:new THREE.Color(0x00f0ff)};
-});
-const byId = Object.fromEntries(sensors.map(s=>[s.id,s]));
-
-/* routes */
-const routeDef = {R1:['S01','S02','S03','S12'],R2:['S11','S04','S05','S06'],R3:['S10','S07','S08','S09']};
-const routeCol = {R1:0x7b5cff,R2:0xff2bd6,R3:0x00f0ff};
-const routes = Object.entries(routeDef).map(([id,ids])=>{
-  const curve = new THREE.CatmullRomCurve3(ids.map(i=>byId[i].pos.clone().setY(0.08)),false,'catmullrom',0.4);
-  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve,120,0.14,6,false),new THREE.MeshBasicMaterial({color:routeCol[id],transparent:true,opacity:1}));
-  scene.add(tube);
-  const glow = new THREE.Mesh(new THREE.TubeGeometry(curve,120,0.28,6,false),new THREE.MeshBasicMaterial({color:routeCol[id],transparent:true,opacity:.1}));
-  scene.add(glow);
-  return {id,ids,curve};
-});
-
-/* city blocks */
-function rand(seed){let s=seed;return()=>((s=Math.imul(s^s>>>15,2246822507)^Math.imul(s^s>>>13,3266489909))>>>0)/4294967296}
-const rnd = rand(7);
-const edgeMats = [0x00f0ff,0xff2bd6,0x7b5cff].map(c=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.55}));
-const bodyMat = new THREE.MeshBasicMaterial({color:0x0a0824});
-let placed=0;
-while(placed<260){
-  const x=(rnd()-.5)*90, z=(rnd()-.5)*90;
-  const p=new THREE.Vector3(x,0,z);
-  if(sensors.some(s=>s.pos.distanceTo(p)<2.6)) continue;
-  if(routes.some(r=>{for(let t=0;t<=1;t+=.04){if(r.curve.getPoint(t).setY(0).distanceTo(p)<1.8)return true}return false})) continue;
-  const w=.7+rnd()*1.6, d=.7+rnd()*1.6;
-  const dist=Math.hypot(x,z);
-  const h=(.4+Math.pow(rnd(),2.2)*7)*(1.25-Math.min(1,dist/60)*.7);
-  const g=new THREE.BoxGeometry(w,h,d);
-  const m=new THREE.Mesh(g,bodyMat); m.position.set(x,h/2,z);
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMats[Math.floor(rnd()*3)]); e.position.copy(m.position);
-  scene.add(m,e); placed++;
-}
-
-/* traffic particles */
-const spriteCanvas=document.createElement('canvas'); spriteCanvas.width=spriteCanvas.height=64;
-{const c=spriteCanvas.getContext('2d'),g=c.createRadialGradient(32,32,0,32,32,32);
- g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64)}
-const sprite=new THREE.CanvasTexture(spriteCanvas);
-const CARS=34, TRAIL=5;
-routes.forEach((r,ri)=>{
-  const n=CARS*TRAIL;
-  r.pos=new Float32Array(n*3); r.colr=new Float32Array(n*3);
-  r.u=Array.from({length:CARS},()=>rnd()); r.v=Array.from({length:CARS},()=>.7+rnd()*.6);
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.BufferAttribute(r.pos,3));
-  g.setAttribute('color',new THREE.BufferAttribute(r.colr,3));
-  r.pts=new THREE.Points(g,new THREE.PointsMaterial({size:1.5,map:sprite,vertexColors:true,transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
-  r.pts.frustumCulled=false; scene.add(r.pts);
-});
-
-/* starfield */
-{const n=700,a=new Float32Array(n*3);for(let i=0;i<n;i++){const r=110+rnd()*60,t=rnd()*Math.PI*2,p=Math.acos(rnd()*.9+.1);a[i*3]=r*Math.sin(p)*Math.cos(t);a[i*3+1]=r*Math.cos(p)+5;a[i*3+2]=r*Math.sin(p)*Math.sin(t)}
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(a,3));
- scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:.7,color:0x9aa8ff,map:sprite,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false})))}
-
-/* post */
-const composer=new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),1.0,.6,.42);
-composer.addPass(bloom); composer.addPass(new OutputPass());
-function resize(){
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  renderer.setSize(w,h,false); composer.setSize(w,h); bloom.setSize(w,h);
-  camera.aspect=w/h; camera.fov = w/h<1 ? 70 : 48; camera.updateProjectionMatrix();
-}
-new ResizeObserver(resize).observe(canvas); resize();
-
-/* hour clock */
-const el={clock:document.getElementById('clock'),sp:document.getElementById('hSpeed'),vol:document.getElementById('hVol'),st:document.getElementById('hStatus')};
-let hour=6, lastStep=0;
-function setHour(h){
-  hour=h;
-  const sp=mean(D.sensors.map(s=>s.speed[h])), vo=mean(D.sensors.map(s=>s.volume[h]));
-  el.clock.textContent=String(h).padStart(2,'0')+':00';
-  el.sp.textContent=sp.toFixed(1)+' km/h'; el.vol.textContent=vo.toFixed(0)+' veh';
-  const jam=sp<30; el.st.textContent=jam?'RUSH HOUR':'FREE FLOW';
-  el.st.style.color=jam?'#ff3860':'#00f0ff'; el.st.style.boxShadow=`0 0 14px ${jam?'#ff386066':'#00f0ff55'}`;
-}
-setHour(hour);
-
-/* mouse parallax */
-let mx=0,my=0; addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
-
-const clock=new THREE.Clock(); const tmp=new THREE.Vector3();
-function frame(){
-  const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
-  if(t-lastStep>1.7){lastStep=t;setHour((hour+1)%24)}
-  const k=1-Math.pow(.001,dt);
-
-  sensors.forEach((s,i)=>{
-    const sp=s.speed[hour], vo=s.volume[hour];
-    const target=.5+vo/60*5.5;
-    s.h+=(target-s.h)*k;
-    s.tower.scale.y=s.h; s.tower.position.y=s.h/2; s.cap.position.y=s.h+.06;
-    s.tc.lerp(speedColor(sp),k);
-    s.tower.material.color.copy(s.tc).multiplyScalar(.8); s.cap.material.color.copy(s.tc).multiplyScalar(1.1);
-    const pulse=(t*(sp<25?1.8:.7)+i*.3)%1;
-    s.ring.scale.setScalar(1+pulse*2.2); s.ring.material.opacity=.7*(1-pulse); s.ring.material.color.copy(s.tc);
-  });
-
-  routes.forEach(r=>{
-    const sp=mean(r.ids.map(i=>byId[i].speed[hour]));
-    const rate=sp/45*.05;
-    for(let c=0;c<CARS;c++){
-      r.u[c]=(r.u[c]+rate*r.v[c]*dt)%1;
-      const color=speedColor(sp);
-      for(let j=0;j<TRAIL;j++){
-        const u=((r.u[c]-j*.007*(.4+sp/45))%1+1)%1;
-        r.curve.getPointAt(u,tmp);
-        const idx=(c*TRAIL+j)*3, f=Math.pow(1-j/TRAIL,1.3)*1.8;
-        r.pos[idx]=tmp.x; r.pos[idx+1]=.2; r.pos[idx+2]=tmp.z;
-        r.colr[idx]=color.r*f; r.colr[idx+1]=color.g*f; r.colr[idx+2]=color.b*f;
-      }
-    }
-    r.pts.geometry.attributes.position.needsUpdate=true; r.pts.geometry.attributes.color.needsUpdate=true;
-  });
-
-  const a=t*.07+.6, R=48;
-  camera.position.set(Math.sin(a)*R+mx*6, 25+my*-4, Math.cos(a)*R*.85);
-  camera.lookAt(0,1.5,0);
-  composer.render();
-  requestAnimationFrame(frame);
-}
-frame();
-</script>
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
