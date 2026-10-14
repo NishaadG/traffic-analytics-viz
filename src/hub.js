@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DATA } from './data.js';
+import { A } from './analysis.js';
 import { mean, label, glowSprite, rng } from './common.js';
 
 const peakH = h => (h >= 7 && h <= 9) || (h >= 17 && h <= 20);
@@ -9,6 +10,7 @@ const worst = [...DATA.sensors].sort((a, b) => a.avg - b.avg)[0];
 
 export const NODES = [
   { id: 'spark', name: 'SPARK PIPELINE', sub: 'raw readings → clean groups', color: 0xffb020, leaves: ['read.csv()', 'clean + enrich', 'groupBy · agg'] },
+  { id: 'analysis', name: 'ANALYSIS', sub: 'what the data says', color: 0xff6a3d, leaves: [`avg ${A.summary.avg_speed} km/h`, `r = ${A.corr}`, `${Math.round(A.levels.High / A.summary.readings * 100)}% High jam`] },
   { id: 'pulse', name: 'CITY PULSE', sub: 'speed across 24 hours', color: 0x00f0ff, leaves: [`−${drop}% at rush hour`, '07–09 · 17–20', 'time series'] },
   { id: 'heat', name: 'HEAT TUNNEL', sub: '12 sensors × 24 hours', color: 0xff2bd6, leaves: ['heatmap', `${worst.id} slowest`, 'jam bands'] },
   { id: 'race', name: 'ROUTE RACE', sub: 'which route wins?', color: 0x7b5cff, leaves: best.map(([r, v]) => `${r} · ${v.time.toFixed(1)} min`) },
@@ -33,7 +35,7 @@ export function buildHub() {
   group.add(cl);
 
   /* primary nodes + leaves */
-  const R = 15;
+  const R = 16;
   NODES.forEach((n, i) => {
     const th = (i / NODES.length) * Math.PI * 2 + .3;
     const dir = new THREE.Vector3(Math.cos(th), 0, Math.sin(th));
