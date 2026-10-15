@@ -5,8 +5,11 @@ export const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 export const ease = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 export const hourLabel = h => String(h).padStart(2, '0') + ':00';
+/* notebook peak definition: 07–09 morning, 16–19 evening */
+export const isPeak = h => (h >= 7 && h <= 9) || (h >= 16 && h <= 19);
+export const speedCls = s => (s < 22 ? 'jam' : s < 30 ? 'slow' : 'flow');
 
-const stops = [[15, '#ff2a55'], [25, '#ff2bd6'], [33, '#7b5cff'], [42, '#1fb6ff'], [50, '#00f0ff']]
+const stops = [[13, '#ff2a55'], [20, '#ff2bd6'], [27, '#7b5cff'], [34, '#1fb6ff'], [42, '#00f0ff']]
   .map(([s, c]) => [s, new THREE.Color(c)]);
 export function speedColor(s, out = new THREE.Color()) {
   if (s <= stops[0][0]) return out.copy(stops[0][1]);

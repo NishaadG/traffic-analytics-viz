@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { DATA } from '../data.js';
 import { A } from '../analysis.js';
-import { label, speedColor, makeGrid, hourLabel, clamp, glowSprite } from '../common.js';
+import { label, speedColor, makeGrid, hourLabel, clamp, glowSprite, isPeak, speedCls } from '../common.js';
 import { makeCar } from '../car.js';
 
 const X = h => (h - 11.5) * 2.1, YS = .38;
@@ -9,7 +9,6 @@ const speedAtU = u => {
   const f = clamp(u, 0, 1) * 23, i = Math.floor(f), k = f - i;
   return DATA.hourly[i] * (1 - k) + DATA.hourly[Math.min(23, i + 1)] * k;
 };
-const isPeak = h => (h >= 7 && h <= 9) || (h >= 17 && h <= 20);
 
 export function buildPulse() {
   const group = new THREE.Group();
@@ -64,7 +63,7 @@ export function buildPulse() {
   });
 
   /* rush-hour slabs */
-  [[6.5, 9.5, 'MORNING RUSH'], [16.5, 20.5, 'EVENING RUSH']].forEach(([a, b, txt]) => {
+  [[6.5, 9.5, 'MORNING PEAK'], [15.5, 19.5, 'EVENING PEAK']].forEach(([a, b, txt]) => {
     const w = X(b) - X(a), g = new THREE.BoxGeometry(w, 20, W * 2 + 2.5);
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xff2bd6, transparent: true, opacity: .07, depthWrite: false }));
     m.position.set((X(a) + X(b)) / 2, 10, 0);
@@ -141,10 +140,10 @@ export function buildPulse() {
       marker.position.set(X(h), 0, 0); marker.visible = true;
       markGlow.position.set(X(h), DATA.hourly[h] * YS, 0); markGlow.visible = true;
       const s = DATA.hourly[h], vol = A.hourly[h].volume, vs = (s / A.peak.off_speed - 1) * 100;
-      const cls = s < 25 ? 'jam' : s < 35 ? 'slow' : 'flow';
+      const cls = speedCls(s);
       return `<b>${hourLabel(h)} – ${hourLabel((h + 1) % 24)}</b><big class="${cls}">${s.toFixed(1)}<small>km/h</small></big>
-        <em class="${isPeak(h) ? 'jam' : 'flow'}">${isPeak(h) ? 'RUSH HOUR' : 'OFF-PEAK'}</em>
-        <span>${vol.toFixed(0)} vehicles per reading · ${vs >= 0 ? '+' : ''}${vs.toFixed(0)}% vs off-peak average</span><span class="dim">click to send the car here</span>`;
+        <em class="${isPeak(h) ? 'jam' : 'flow'}">${isPeak(h) ? 'PEAK HOUR' : 'OFF-PEAK'}</em>
+        <span>volume ${vol.toFixed(0)} · ${A.hourly[h].tt.toFixed(1)} min avg trip · ${vs >= 0 ? '+' : ''}${vs.toFixed(0)}% vs off-peak</span><span class="dim">click to send the car here</span>`;
     },
     leave() { unhover(); },
     click(ray, ctx) {

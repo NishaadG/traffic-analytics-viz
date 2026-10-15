@@ -1,19 +1,18 @@
 import * as THREE from 'three';
 import { DATA } from './data.js';
 import { A } from './analysis.js';
-import { mean, label, glowSprite, rng } from './common.js';
+import { label, glowSprite, rng } from './common.js';
 
-const peakH = h => (h >= 7 && h <= 9) || (h >= 17 && h <= 20);
-const drop = Math.round((1 - mean(DATA.hourly.filter((_, h) => peakH(h))) / mean(DATA.hourly.filter((_, h) => !peakH(h)))) * 100);
-const best = Object.entries(DATA.routes).sort((a, b) => a[1].time - b[1].time);
-const worst = [...DATA.sensors].sort((a, b) => a.avg - b.avg)[0];
+const drop = Math.round((1 - A.peak.peak_speed / A.peak.off_speed) * 100);
+const best = [...DATA.roads].sort((a, b) => a.speed - b.speed).reverse();
+const worst = A.areas[0];
 
 export const NODES = [
-  { id: 'spark', name: 'SPARK PIPELINE', sub: 'raw readings → clean groups', color: 0xffb020, leaves: ['read.csv()', 'clean + enrich', 'groupBy · agg'] },
+  { id: 'spark', name: 'SPARK PIPELINE', sub: '100,300 rows → clean groups', color: 0xffb020, leaves: ['createDataFrame', 'dropDuplicates', 'groupBy · agg · join'] },
   { id: 'analysis', name: 'ANALYSIS', sub: 'what the data says', color: 0xff6a3d, leaves: [`avg ${A.summary.avg_speed} km/h`, `r = ${A.corr}`, `${Math.round(A.levels.High / A.summary.readings * 100)}% High jam`] },
-  { id: 'pulse', name: 'CITY PULSE', sub: 'speed across 24 hours', color: 0x00f0ff, leaves: [`−${drop}% at rush hour`, '07–09 · 17–20', 'time series'] },
-  { id: 'heat', name: 'HEAT TUNNEL', sub: '12 sensors × 24 hours', color: 0xff2bd6, leaves: ['heatmap', `${worst.id} slowest`, 'jam bands'] },
-  { id: 'race', name: 'ROUTE RACE', sub: 'which route wins?', color: 0x7b5cff, leaves: best.map(([r, v]) => `${r} · ${v.time.toFixed(1)} min`) },
+  { id: 'pulse', name: 'CITY PULSE', sub: 'speed across 24 hours', color: 0x00f0ff, leaves: [`−${drop}% at peak hours`, '07–09 · 16–19', 'time series'] },
+  { id: 'heat', name: 'HEAT TUNNEL', sub: '8 areas × 24 hours', color: 0xff2bd6, leaves: ['heatmap', `${worst.name}`, `${worst.loss}% speed loss`] },
+  { id: 'race', name: 'ROAD RACE', sub: 'which road type wins?', color: 0x7b5cff, leaves: best.slice(0, 3).map(r => `${r.id} · ${r.speed} km/h`) },
   { id: 'insights', name: 'INSIGHTS', sub: 'what to do about it', color: 0x39ffb0, leaves: ['3 findings', 'recommendations', 'limitations'] },
 ];
 

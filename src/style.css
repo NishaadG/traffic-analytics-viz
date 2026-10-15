@@ -49,14 +49,14 @@ pre .c{color:#5e688f}pre .s{color:var(--amber)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .chips span{padding:5px 12px;border:1px solid var(--line);border-radius:99px;font-size:.85rem;color:var(--mute);background:rgba(255,255,255,.02)}
 #board{margin-top:16px;display:grid;gap:8px}
-#board .row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);opacity:.65}
+#board .row{display:grid;grid-template-columns:58px 1fr auto;align-items:center;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);opacity:.65}
 #board .row b{font-family:'Orbitron';font-size:1rem}
 #board .row span{color:var(--mute)}
 #board .row i{font-style:normal;font-family:'Orbitron';font-size:.7rem;letter-spacing:.2em;color:var(--mute)}
 #board .row.done{opacity:1}
-#board .r1 b{color:var(--violet)}#board .r2 b{color:var(--mag)}#board .r3 b{color:var(--cyan)}
+#board .highway b{color:var(--cyan)}#board .arterial b{color:var(--violet)}#board .collector b{color:var(--mag)}#board .local b{color:var(--amber)}
 #board .row.done i{color:#05040f;background:var(--c,#fff);padding:3px 10px;border-radius:99px}
-#board .r1.done i{--c:var(--violet);color:#fff}#board .r2.done i{--c:var(--mag)}#board .r3.done i{--c:var(--cyan)}
+#board .highway.done i{--c:var(--cyan)}#board .arterial.done i{--c:var(--violet);color:#fff}#board .collector.done i{--c:var(--mag)}#board .local.done i{--c:var(--amber)}
 
 #panel.wide{left:50%;top:auto;bottom:92px;width:min(1080px,calc(100vw - 48px));transform:translate(-50%,30px);padding:22px 26px}
 #panel.wide.on{transform:translate(-50%,0)}
@@ -156,14 +156,15 @@ body[data-st="pulse"] #speedo,body[data-st="heat"] #speedo{opacity:1}
 .stats span{font-size:.8rem;color:var(--mute)}
 #panel ul{margin:6px 0 0 18px;color:#b6bde6;line-height:1.5;font-size:1rem}
 #panel li{margin-bottom:4px}
-.rt.r1{color:var(--violet)}.rt.r2{color:var(--mag)}.rt.r3{color:var(--cyan)}
+.rt.highway{color:var(--cyan)}.rt.arterial{color:var(--violet)}.rt.collector{color:var(--mag)}.rt.local{color:var(--amber)}
 
 /* race toggles */
-.toggles{display:flex;gap:8px;margin-top:12px}
+.toggles{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .toggles button{cursor:pointer;font-family:'Orbitron';font-size:.62rem;letter-spacing:.14em;padding:8px 14px;border-radius:99px;background:transparent;border:1px solid var(--line);color:var(--mute);transition:.2s}
-.toggles button.on.r1{color:#fff;background:rgba(123,92,255,.35);border-color:var(--violet)}
-.toggles button.on.r2{color:#fff;background:rgba(255,43,214,.3);border-color:var(--mag)}
-.toggles button.on.r3{color:#fff;background:rgba(0,240,255,.25);border-color:var(--cyan)}
+.toggles button.on.highway{color:#fff;background:rgba(0,240,255,.25);border-color:var(--cyan)}
+.toggles button.on.arterial{color:#fff;background:rgba(123,92,255,.35);border-color:var(--violet)}
+.toggles button.on.collector{color:#fff;background:rgba(255,43,214,.3);border-color:var(--mag)}
+.toggles button.on.local{color:#fff;background:rgba(255,176,32,.28);border-color:var(--amber)}
 .toggles button[data-restart]{margin-left:auto;color:var(--cyan);border-color:rgba(0,240,255,.4)}
 #board .row.off{opacity:.25}
 
@@ -178,7 +179,7 @@ body[data-st="pulse"] #speedo,body[data-st="heat"] #speedo{opacity:1}
 #tip em{font-style:normal;font-family:'Orbitron';font-size:.6rem;letter-spacing:.25em}
 #tip i{font-style:normal;font-weight:600}
 
-/* sensor inspector card */
+/* area inspector card */
 #card{position:fixed;right:28px;top:96px;z-index:25;width:min(320px,calc(100vw - 56px));padding:20px 22px;opacity:0;pointer-events:none;transform:translateX(24px);transition:.45s}
 #card.on{opacity:1;pointer-events:auto;transform:none}
 #card h3{font-family:'Orbitron';font-size:1.05rem;margin:2px 0 4px}

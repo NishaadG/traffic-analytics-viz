@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { label, glowSprite, makeGrid, rng } from '../common.js';
 
 const STAGES = [
-  { name: 'READ', code: 'spark.read.csv()', n: '576 rows · 9 columns', color: 0xffb020, geo: new THREE.CylinderGeometry(2.2, 2.2, 4, 28) },
-  { name: 'CLEAN', code: 'dropDuplicates · filter', n: '576 → 576 · 0 dup · 0 invalid', color: 0xff7a3d, geo: new THREE.BoxGeometry(3.8, 3.8, 3.8) },
-  { name: 'ENRICH', code: 'withColumn · when', n: '+ hour · date · congestion', color: 0xff2bd6, geo: new THREE.OctahedronGeometry(3) },
-  { name: 'AGGREGATE', code: 'groupBy · agg', n: '24 hours · 12 sensors · 3 routes', color: 0x7b5cff, geo: new THREE.IcosahedronGeometry(2.8, 0) },
+  { name: 'LOAD', code: 'spark.createDataFrame()', n: '100,300 rows · 14 columns', color: 0xffb020, geo: new THREE.CylinderGeometry(2.2, 2.2, 4, 28) },
+  { name: 'CLEAN', code: 'dropDuplicates · filter', n: '100,300 → 100,000 · 300 dup', color: 0xff7a3d, geo: new THREE.BoxGeometry(3.8, 3.8, 3.8) },
+  { name: 'ENRICH', code: 'withColumn · when · join', n: '+ peak period · speed loss · level', color: 0xff2bd6, geo: new THREE.OctahedronGeometry(3) },
+  { name: 'AGGREGATE', code: 'groupBy · agg', n: '24 hours · 8 areas · 4 road types', color: 0x7b5cff, geo: new THREE.IcosahedronGeometry(2.8, 0) },
   { name: 'VISUALISE', code: 'toPandas() → 3D views', n: '6 scenes', color: 0x00f0ff, geo: new THREE.ConeGeometry(2.9, 4.6, 4) },
 ];
 const SP = 11;

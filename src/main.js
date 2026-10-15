@@ -7,7 +7,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import './style.css';
 
 import { DATA } from './data.js';
-import { ease, setVisible, rng, glowTexture, hourLabel } from './common.js';
+import { ease, setVisible, rng, glowTexture, hourLabel, isPeak, speedCls } from './common.js';
 import { loadCar } from './car.js';
 import { buildHub } from './hub.js';
 import { buildSpark } from './stations/spark.js';
@@ -21,7 +21,7 @@ import { INFO } from './info.js';
 const qs = new URLSearchParams(location.search);
 const LITE = qs.has('lite');
 const $ = id => document.getElementById(id);
-const byAvg = [...DATA.sensors].sort((a, b) => a.avg - b.avg);
+const byAvg = [...DATA.areas].sort((a, b) => a.avg - b.avg);
 
 /* ---------- renderer ---------- */
 const canvas = $('scene');
@@ -92,38 +92,36 @@ const ctx = {
     lastHud = key;
     hudEl.hour.textContent = hudEl.cHour.textContent = hourLabel(h);
     hudEl.speed.textContent = s.toFixed(0);
-    hudEl.bar.style.width = Math.min(100, s / 50 * 100) + '%';
-    hudEl.bar.style.background = s < 25 ? 'var(--red)' : s < 35 ? 'var(--mag)' : 'var(--cyan)';
+    hudEl.bar.style.width = Math.min(100, s / 45 * 100) + '%';
+    hudEl.bar.style.background = s < 22 ? 'var(--red)' : s < 30 ? 'var(--mag)' : 'var(--cyan)';
     if (!scrubbing) hudEl.scrub.value = h;
   },
   flash() { const f = $('fade'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 260); },
   board(rows) {
     const b = $('board');
     if (!b) return;
-    b.innerHTML = rows.map(r => `<div class="row ${r.id.toLowerCase()} ${r.rank ? 'done' : ''} ${r.hidden ? 'off' : ''}"><b>${r.id}</b><span>${r.min.toFixed(1)} min</span><i>${r.hidden ? 'hidden' : r.rank ? ['', '1ST', '2ND', '3RD'][r.rank] : '…'}</i></div>`).join('');
+    b.innerHTML = rows.map(r => `<div class="row ${r.cls} ${r.rank ? 'done' : ''} ${r.hidden ? 'off' : ''}"><b>${r.code}</b><span>${r.id} · ${r.min.toFixed(1)} min</span><i>${r.hidden ? 'hidden' : r.rank ? ['', '1ST', '2ND', '3RD'][r.rank] : '…'}</i></div>`).join('');
   },
   card(s, hour) {
-    const peak = h => (h >= 7 && h <= 9) || (h >= 17 && h <= 20);
-    const W = 280, H = 84, x = i => 6 + i * (W - 12) / 23, y = v => H - 8 - (v / 60) * (H - 16);
+    const W = 280, H = 84, x = i => 6 + i * (W - 12) / 23, y = v => H - 8 - (v / 45) * (H - 16);
     const pts = s.speed.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const bands = [[7, 9], [17, 20]].map(([a, b]) => `<rect x="${x(a) - 3}" y="2" width="${x(b) - x(a) + 6}" height="${H - 4}" fill="rgba(255,43,214,.13)"/>`).join('');
-    const cls = v => (v < 20 ? 'jam' : v < 35 ? 'slow' : 'flow');
+    const bands = [[7, 9], [16, 19]].map(([a, b]) => `<rect x="${x(a) - 3}" y="2" width="${x(b) - x(a) + 6}" height="${H - 4}" fill="rgba(255,43,214,.13)"/>`).join('');
     const rank = byAvg.findIndex(q => q.id === s.id) + 1;
     $('card').innerHTML = `
       <button class="x" data-close>×</button>
-      <div class="kicker">SENSOR INSPECTOR</div>
-      <h3>${s.id} · ${s.road}</h3>
-      <div class="meta">Route ${s.route} · ${s.dist} km segment · <b>#${rank}</b> of 12 slowest</div>
+      <div class="kicker">AREA INSPECTOR</div>
+      <h3>${s.id} · ${s.name}</h3>
+      <div class="meta">${s.n.toLocaleString()} records · ${s.loss.toFixed(1)}% avg speed loss · <b>#${rank}</b> of ${byAvg.length} slowest</div>
       <div class="cstats">
-        <div><b class="${cls(s.speed[hour])}">${s.speed[hour].toFixed(1)}</b><span>km/h at ${hourLabel(hour)}</span></div>
-        <div><b>${s.avg.toFixed(1)}</b><span>daily avg</span></div>
-        <div><b>${s.volume[hour].toFixed(0)}</b><span>vehicles now</span></div>
+        <div><b class="${speedCls(s.speed[hour])}">${s.speed[hour].toFixed(1)}</b><span>km/h at ${hourLabel(hour)}</span></div>
+        <div><b>${s.avg.toFixed(1)}</b><span>year avg</span></div>
+        <div><b>${s.volume[hour].toFixed(0)}</b><span>avg volume now</span></div>
       </div>
       <svg viewBox="0 0 ${W} ${H}" class="spark">${bands}
         <polyline points="${pts}" fill="none" stroke="#00f0ff" stroke-width="2"/>
         <line x1="${x(hour)}" x2="${x(hour)}" y1="2" y2="${H - 2}" stroke="#fff" stroke-opacity=".6"/>
         <circle cx="${x(hour)}" cy="${y(s.speed[hour])}" r="4" fill="#fff"/></svg>
-      <div class="meta">24-hour speed · pink bands = rush hours${peak(hour) ? ' · <b class="jam">this hour is a rush hour</b>' : ''}</div>`;
+      <div class="meta">Average speed by hour across 2025 · pink bands = peak hours${isPeak(hour) ? ' · <b class="jam">this hour is a peak hour</b>' : ''}</div>`;
     $('card').classList.add('on');
   },
 };
@@ -164,7 +162,7 @@ const HINT = {
   analysis: 'HOVER THE DONUT AND BARS · PANEL TABS HOLD THE SPARK TABLES',
   pulse: 'HOVER THE RIBBON · CLICK TO JUMP · W/S OR SCROLL TO DRIVE · SPACE PAUSES',
   heat: 'HOVER A PANEL · CLICK TO INSPECT · W/S OR SCROLL TO DRIVE · SPACE PAUSES',
-  race: 'DRAG THE HOUR SLIDER · HOVER OR CLICK A SENSOR · SPACE PAUSES',
+  race: 'DRAG THE HOUR SLIDER · HOVER OR CLICK AN AREA · SPACE PAUSES',
 };
 $('nav').innerHTML = ORDER.map(id => `<button data-id="${id}">${NAME[id]}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) flyTo(b.dataset.id); });
